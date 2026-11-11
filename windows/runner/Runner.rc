@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.byone421" "\0"
-            VALUE "FileDescription", "foods" "\0"
+            VALUE "FileDescription", "noodles" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "foods" "\0"
+            VALUE "InternalName", "noodles" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.byone421. All rights reserved." "\0"
-            VALUE "OriginalFilename", "foods.exe" "\0"
-            VALUE "ProductName", "foods" "\0"
+            VALUE "OriginalFilename", "noodles.exe" "\0"
+            VALUE "ProductName", "noodles" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

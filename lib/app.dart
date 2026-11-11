@@ -10,7 +10,7 @@ class FoodLogApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: '食作簿',
+      title: '一碗面',
       theme: AppTheme.light,
       home: const RecipesHomePage(),
     );

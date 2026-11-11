@@ -1,6 +1,6 @@
 {
-    "name": "foods",
-    "short_name": "foods",
+    "name": "noodles",
+    "short_name": "noodles",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
