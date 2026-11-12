@@ -5,13 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../models/inventory_settings.dart';
 import '../../../models/recipe.dart';
 import '../../../models/recipe_filter.dart';
 import '../../../providers/recipe_providers.dart';
+import '../../fanfou/presentation/fanfou_page.dart';
 import '../../inventory/presentation/inventory_add_item_page.dart';
 import '../../inventory/presentation/inventory_home_page.dart';
 import '../../profile/presentation/profile_page.dart';
-import '../../profile/presentation/recipe_categories_page.dart';
 import 'new_recipe_page.dart';
 import 'recipe_detail_page.dart';
 
@@ -24,15 +25,14 @@ class RecipesHomePage extends ConsumerStatefulWidget {
 class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
   final search = TextEditingController();
   int tab = 0;
+  int? inventoryCategoryId;
+  Key inventoryKey = UniqueKey();
   String? selectedCategory;
-  bool favoritesOnly = false;
   RecipeSort sort = RecipeSort.updated;
-  final favoriteBusy = <String>{};
 
   void _clearFilters() => setState(() {
     search.clear();
     selectedCategory = null;
-    favoritesOnly = false;
   });
 
   Future<void> _refreshRecipes() async {
@@ -53,25 +53,6 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
     ref.invalidate(statsProvider);
   }
 
-  Future<void> _favorite(Recipe recipe) async {
-    if (favoriteBusy.contains(recipe.id)) return;
-    setState(() => favoriteBusy.add(recipe.id));
-    try {
-      await (await ref.read(repositoryProvider.future)).toggleFavorite(recipe);
-      if (!mounted) return;
-      ref.invalidate(recipesProvider);
-      ref.invalidate(recipeProvider(recipe.id));
-      ref.invalidate(statsProvider);
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('收藏更新失败，请重试')));
-      }
-    } finally {
-      if (mounted) setState(() => favoriteBusy.remove(recipe.id));
-    }
-  }
-
   @override
   void dispose() {
     search.dispose();
@@ -84,7 +65,9 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
       MaterialPageRoute(builder: (_) => const NewRecipePage()),
     );
     if (id != null && mounted) {
-      await _openRecipe(id);
+      _clearFilters();
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('菜谱已创建')));
     }
   }
 
@@ -95,12 +78,38 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
     );
   }
 
+  void _showInventoryCategory(InventoryCategory category) => setState(() {
+    inventoryCategoryId = category.id;
+    inventoryKey = UniqueKey();
+    tab = 2;
+  });
+
+  void _showRecipeCategory(String category) => setState(() {
+    search.clear();
+    selectedCategory = category;
+    tab = 0;
+  });
+
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
       child: IndexedStack(
         index: tab,
-        children: [_recipes(), const InventoryHomePage(), const ProfilePage()],
+        children: [
+          _recipes(),
+          FanfouPage(
+            onOpenRecipe: _openRecipe,
+            onAddRecipe: _newRecipe,
+          ),
+          InventoryHomePage(
+            key: inventoryKey,
+            initialCategoryId: inventoryCategoryId,
+          ),
+          ProfilePage(
+            onInventoryCategorySelected: _showInventoryCategory,
+            onRecipeCategorySelected: _showRecipeCategory,
+          ),
+        ],
       ),
     ),
     bottomNavigationBar: SafeArea(
@@ -122,18 +131,25 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
               onTap: () => setState(() => tab = 0),
             ),
             _TabButton(
+              label: '饭否',
+              icon: Icons.rice_bowl_outlined,
+              selectedIcon: Icons.rice_bowl,
+              selected: tab == 1,
+              onTap: () => setState(() => tab = 1),
+            ),
+            _TabButton(
               label: '万物',
               icon: Icons.category_outlined,
               selectedIcon: Icons.category,
-              selected: tab == 1,
-              onTap: () => setState(() => tab = 1),
+              selected: tab == 2,
+              onTap: () => setState(() => tab = 2),
             ),
             _TabButton(
               label: '我的',
               icon: Icons.person_outline,
               selectedIcon: Icons.person,
-              selected: tab == 2,
-              onTap: () => setState(() => tab = 2),
+              selected: tab == 3,
+              onTap: () => setState(() => tab = 3),
             ),
           ],
         ),
@@ -145,7 +161,7 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
             tooltip: '新建菜谱',
             child: const Icon(Icons.add),
           )
-        : tab == 1
+        : tab == 2
         ? FloatingActionButton(
             onPressed: _newInventoryItem,
             tooltip: '记录物品',
@@ -165,8 +181,7 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
     final category = categories.contains(selectedCategory)
         ? selectedCategory
         : null;
-    final filtered =
-        search.text.trim().isNotEmpty || category != null || favoritesOnly;
+    final filtered = search.text.trim().isNotEmpty || category != null;
     return RefreshIndicator(
       onRefresh: () async {
         try {
@@ -189,7 +204,7 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
             ),
           ),
           Text(
-            '食作簿',
+            '掌勺人',
             style: Theme.of(context).textTheme.headlineLarge
                 ?.copyWith(fontWeight: FontWeight.w800),
           ),
@@ -208,57 +223,6 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
                       icon: const Icon(Icons.close),
                       onPressed: () => setState(() => search.clear()),
                     ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilterChip(
-                label: Text('仅看收藏 · ${all.where((r) => r.isFavorite).length}'),
-                avatar: const Icon(Icons.favorite_border, size: 17),
-                selected: favoritesOnly,
-                onSelected: (value) => setState(() => favoritesOnly = value),
-              ),
-              ActionChip(
-                avatar: const Icon(Icons.tune, size: 17),
-                label: const Text('管理分类'),
-                onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const RecipeCategoriesPage(),
-                    ),
-                  );
-                  if (mounted) setState(() => selectedCategory = null);
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                ChoiceChip(
-                  label: Text('全部 ${all.length}'),
-                  selected: category == null,
-                  onSelected: (_) => setState(() => selectedCategory = null),
-                ),
-                for (final name in categories)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: ChoiceChip(
-                      label: Text(
-                        '$name ${all.where((r) => r.category == name).length}',
-                      ),
-                      selected: category == name,
-                      onSelected: (_) =>
-                          setState(() => selectedCategory = name),
-                    ),
-                  ),
-              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -336,7 +300,6 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
                 all,
                 keyword: search.text,
                 category: category,
-                favoritesOnly: favoritesOnly,
                 sort: sort,
               );
               if (items.isEmpty) {
@@ -401,6 +364,20 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
     ),
   );
 
+  Widget _recipeInitial(String title) => ColoredBox(
+    color: AppColors.soft,
+    child: Center(
+      child: Text(
+        title.isEmpty ? '?' : title.characters.first,
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontSize: 28,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    ),
+  );
+
   Widget _card(Recipe recipe) => Card(
     margin: const EdgeInsets.only(bottom: 12),
     elevation: 0,
@@ -421,28 +398,13 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
               child: SizedBox(
                 width: 76,
                 height: 76,
-                child:
-                    recipe.coverImagePath != null &&
-                        File(recipe.coverImagePath!).existsSync()
+                child: recipe.coverImagePath != null
                     ? Image.file(
                         File(recipe.coverImagePath!),
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const ColoredBox(
-                          color: AppColors.soft,
-                          child: Icon(
-                            Icons.restaurant,
-                            color: AppColors.primary,
-                          ),
-                        ),
+                        errorBuilder: (_, _, _) => _recipeInitial(recipe.title),
                       )
-                    : const ColoredBox(
-                        color: Color(0xFFD98253),
-                        child: Icon(
-                          Icons.restaurant,
-                          size: 34,
-                          color: Colors.white,
-                        ),
-                      ),
+                    : _recipeInitial(recipe.title),
               ),
             ),
             const SizedBox(width: 14),
@@ -505,16 +467,6 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
                         ),
                       ),
                 ],
-              ),
-            ),
-            IconButton(
-              onPressed: favoriteBusy.contains(recipe.id)
-                  ? null
-                  : () => _favorite(recipe),
-              tooltip: recipe.isFavorite ? '取消收藏' : '收藏',
-              icon: Icon(
-                recipe.isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: AppColors.primary,
               ),
             ),
           ],

@@ -1,17 +1,136 @@
-# noodles
+# 一碗面 · Noodles
 
-A new Flutter project.
+记录做饭的过程，也照顾生活里的小物件。
 
-## Getting Started
+一碗面是一款使用 Flutter 开发的本地生活记录应用：把喜欢的菜记下来，为每次调整保留一个版本；纠结吃什么时交给「饭否」；用「万物」整理物品、查看保质期。无需注册账号，核心功能离线可用。
 
-This project is a starting point for a Flutter application.
+## 功能
 
-A few resources to get you started if this is your first Flutter project:
+### 菜谱：把拿手菜慢慢打磨出来
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- 记录菜谱名称、分类和简介，搜索名称、简介或分类。
+- 按最近更新、最近创建或名称排序。
+- 为一道菜创建、编辑、复制多个烹饪版本，分别记录食材、步骤、评分、成品反馈和下次改进。
+- 每个版本最多保存 5 张成品照片，支持拍照或从相册选择。
+- 标记最佳版本，对比两个版本的用料、步骤、照片和复盘记录。
+- 在详情页收藏菜谱；在「我的」中管理分类，点选分类可返回筛选后的菜谱列表。
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 饭否：今天吃点什么？
+
+- 跳转到分类选择页，搜索并多选参与抽取的分类；不选分类表示「都可以」。
+- 设置这顿做几道，从已有菜谱中随机选择，同一桌内不会重复。
+- 锁定想保留的菜，再点「换一桌」替换其他菜，并优先选择上次没出现的菜。
+- 点击抽中的菜谱即可查看做法。
+
+### 万物：让物品和保质期有迹可循
+
+- 添加、编辑、复制和删除物品，记录分类、位置、数量、生产日期、购买信息和备注。
+- 直接填写到期日期，或根据生产日期及天／周／月／年的保存时长计算。
+- 每件物品最多保存 5 张图片。
+- 按名称、分类或位置搜索，按分类及到期区间筛选。
+- 查看已过期和不同天数内到期的物品数量，按最近到期、最近更新或最近创建排序。
+- 在「我的」中维护物品分类、调整到期区间，并导入或导出万物数据。
+
+到期区间是累计统计：例如「15 天内到期」包含「7 天内到期」的物品，但不包含已过期物品。当前到期提示通过应用内统计和筛选展示。
+
+## 食材输入规则
+
+「准备食材」每行填写一种食材，使用**最后一个空格**分隔名称与用量。用量可以是任意文字，无需使用固定单位：
+
+```text
+牛腩 500克
+低筋 面粉 约100克
+盐 按口味添加
+```
+
+以上分别解析为「牛腩 / 500克」「低筋 面粉 / 约100克」「盐 / 按口味添加」。没有空格时，整行作为食材名称，用量留空。数字和单位建议连写，例如 `500克`；若写成 `牛腩 500 克`，名称会是 `牛腩 500`，用量会是 `克`。
+
+## 运行项目
+
+当前主要面向 Android 开发和调试。仓库保留了 Flutter 生成的其他平台目录，但不代表这些平台已经完成适配；其中万物数据导入、导出的系统文件选择能力目前仅有 Android 原生实现。
+
+### 环境
+
+- Flutter stable；当前开发环境为 Flutter **3.47.5**、Dart **3.13.4**。
+- Dart SDK 需满足 `pubspec.yaml` 中的 `^3.13.4` 约束。
+- Android SDK、JDK 17，以及开启 USB 调试的 Android 手机或模拟器。
+
+在克隆后的项目根目录运行：
+
+```sh
+flutter doctor
+flutter pub get
+flutter devices
+flutter run
+```
+
+连接多台设备时，使用 `flutter run -d <设备ID>` 指定目标。应用不需要配置后端服务或 API Key。
+
+### 构建 APK
+
+```sh
+# 调试包
+flutter build apk --debug
+
+# Release 构建
+flutter build apk --release
+```
+
+产物位于 `build/app/outputs/flutter-apk/`。目前 Android 的 release 构建仍使用 debug 签名，正式分发前请在 `android/app/build.gradle.kts` 中配置自己的 release 签名。
+
+## 数据存储与备份
+
+菜谱、版本和物品信息保存在设备应用目录内的 SQLite 数据库 `food_log.db`，照片保存在本地文件中。当前没有应用内账号系统或云端同步。
+
+「我的 → 导出万物数据」会生成包含**物品、物品分类和图片**的 JSON 备份；在「导入万物数据」中选择该文件即可合并恢复。这个备份**不包含菜谱、烹饪版本和到期提醒天数设置**，目前也没有菜谱数据的应用内导出入口。
+
+卸载应用或清除应用数据可能导致本地记录丢失，万物备份应保存到应用目录之外。
+
+### 迁移旧版物品数据
+
+导入入口兼容旧版导出的分类 CSV、物品 CSV 及配套图片目录：
+
+1. 先导入分类 CSV。
+2. 再选择物品 CSV，按需选择配套图片目录。
+3. 查看导入预览，确认后合并。
+
+导入按分类名称合并分类，并识别已有的相同物品记录；同名分类的说明及排序会按导入内容更新。详细格式、图片匹配及限制见 [迁移说明](test/INVENTORY_MIGRATION.md)。
+
+## 技术与目录
+
+应用使用 Flutter / Material 3 构建界面，Riverpod 管理状态，`sqflite` 保存本地数据，`image_picker` 处理拍照和图片选择。Android 通过 MethodChannel 调用系统文件选择器完成万物数据导入、导出。
+
+```text
+lib/
+├── main.dart                  # 应用入口
+├── app.dart                   # MaterialApp 配置
+├── core/
+│   ├── database/              # SQLite 仓储、万物导入导出
+│   └── theme/                 # 颜色与主题
+├── features/
+│   ├── recipes/               # 菜谱列表、新建与详情
+│   ├── versions/              # 烹饪版本编辑入口
+│   ├── comparison/            # 版本对比
+│   ├── fanfou/                # 随机选菜与分类多选
+│   ├── inventory/             # 物品与物品分类
+│   └── profile/               # 分类、到期区间、数据迁移设置
+├── models/                    # 数据模型、输入解析和抽菜逻辑
+└── providers/                 # Riverpod 数据提供器
+test/                          # 单元／界面测试与验证记录
+android/app/src/main/kotlin/    # Android 系统文件选择实现
+```
+
+## 开发检查
+
+```sh
+flutter analyze
+flutter test
+```
+
+单独运行饭否测试：
+
+```sh
+flutter test test/fanfou_test.dart
+```
+
+仓库中的测试用例涉及菜谱筛选、导航、版本与图片编辑、分类管理、随机选菜及万物数据解析等场景。真机上的拍照、文件选择、导入导出和数据库升级仍需结合设备验证。

@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+const maxRecipeImages = 5;
+
 class Recipe {
   const Recipe({required this.id, required this.title, required this.category, required this.description, this.coverImagePath, this.isFavorite = false, required this.createdAt, required this.updatedAt});
   final String id;
@@ -52,16 +56,58 @@ class CookingStep {
 }
 
 class FinishedRecord {
-  const FinishedRecord({required this.id, required this.versionId, this.imagePath, this.rating, required this.note, required this.nextImprovement, required this.createdAt});
+  FinishedRecord({
+    required this.id,
+    required this.versionId,
+    String? imagePath,
+    List<String> imagePaths = const [],
+    this.rating,
+    required this.note,
+    required this.nextImprovement,
+    required this.createdAt,
+  }) : imagePaths = List.unmodifiable(imagePaths.isNotEmpty
+          ? imagePaths
+          : [if (imagePath != null && imagePath.isNotEmpty) imagePath]);
   final String id;
   final String versionId;
-  final String? imagePath;
+  final List<String> imagePaths;
+  String? get imagePath => imagePaths.firstOrNull;
+
+  static List<String> readImagePaths(Map<String, Object?> map) {
+    final paths = (jsonDecode(map['image_paths'] as String? ?? '[]') as List)
+        .cast<String>();
+    return paths.isNotEmpty
+        ? paths
+        : [
+            if (map['image_path'] case final String path when path.isNotEmpty)
+              path,
+          ];
+  }
+
   final double? rating;
   final String note;
   final String nextImprovement;
   final DateTime createdAt;
-  factory FinishedRecord.fromMap(Map<String, Object?> m) => FinishedRecord(id: m['id']! as String, versionId: m['version_id']! as String, imagePath: m['image_path'] as String?, rating: (m['rating'] as num?)?.toDouble(), note: m['note'] as String? ?? '', nextImprovement: m['next_improvement'] as String? ?? '', createdAt: DateTime.parse(m['created_at']! as String));
-  Map<String, Object?> toMap() => {'id': id, 'version_id': versionId, 'image_path': imagePath, 'rating': rating, 'note': note, 'next_improvement': nextImprovement, 'created_at': createdAt.toIso8601String()};
+  factory FinishedRecord.fromMap(Map<String, Object?> m) => FinishedRecord(
+    id: m['id']! as String,
+    versionId: m['version_id']! as String,
+    imagePath: m['image_path'] as String?,
+    imagePaths: readImagePaths(m),
+    rating: (m['rating'] as num?)?.toDouble(),
+    note: m['note'] as String? ?? '',
+    nextImprovement: m['next_improvement'] as String? ?? '',
+    createdAt: DateTime.parse(m['created_at']! as String),
+  );
+  Map<String, Object?> toMap() => {
+    'id': id,
+    'version_id': versionId,
+    'image_path': imagePaths.firstOrNull,
+    'image_paths': jsonEncode(imagePaths),
+    'rating': rating,
+    'note': note,
+    'next_improvement': nextImprovement,
+    'created_at': createdAt.toIso8601String(),
+  };
 }
 
 class VersionBundle {
@@ -78,3 +124,48 @@ class IngredientInput {
   final String amount;
   final String unit;
 }
+String formatRecipeIngredient(Ingredient item) => [
+  item.name,
+  item.amount,
+  item.unit,
+].where((part) => part.isNotEmpty).join(' ');
+
+List<IngredientInput> parseRecipeIngredients(
+  String text, {
+  List<Ingredient> existing = const [],
+}) => text
+    .split('\n')
+    .map((line) => line.trim())
+    .where((line) => line.isNotEmpty)
+    .map((line) {
+      final original = existing
+          .where((item) => formatRecipeIngredient(item) == line)
+          .firstOrNull;
+      if (original != null) {
+        return IngredientInput(
+          name: original.name,
+          amount: original.amount,
+          unit: original.unit,
+        );
+      }
+      final separator = line.lastIndexOf(RegExp(r'\s'));
+      return IngredientInput(
+        name: separator < 0 ? line : line.substring(0, separator).trim(),
+        amount: separator < 0 ? '' : line.substring(separator + 1).trim(),
+        unit: '',
+      );
+    })
+    .toList();
+
+List<String> parseRecipeSteps(
+  String text, {
+  List<String> existing = const [],
+}) => text == existing.join('\n') ? List.of(existing) : text
+    .split('\n')
+    .map(
+      (line) => existing.contains(line.trim())
+          ? line.trim()
+          : line.replaceFirst(RegExp(r'^\s*\d+[.)、]\s*'), '').trim(),
+    )
+    .where((line) => line.isNotEmpty)
+    .toList();

@@ -32,6 +32,9 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/key.properties
+/android/key.properties
+*.jks
 
 # Symbolication related
 app.*.symbols
