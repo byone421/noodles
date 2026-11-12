@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../models/inventory_transfer.dart';
+import 'json_backup.dart';
 
 class ImportSummary {
   int added = 0,
@@ -275,34 +276,13 @@ class InventoryTransferService {
       }
       items.add({...row, 'image_paths': jsonEncode(exported)});
     }
-    final content = jsonEncode({
+    return saveJsonBackup({
       'format': 'noodles.inventory',
       'version': 1,
       'categories': snapshot['categories'],
       'items': items,
       'images': images,
-    });
-    if (utf8.encode(content).length > 100 * 1024 * 1024) {
-      throw const FormatException('备份超过 100 MB');
-    }
-    final dir = await getTemporaryDirectory();
-    final file = File(
-      p.join(
-        dir.path,
-        'inventory_backup_${DateTime.now().microsecondsSinceEpoch}.json',
-      ),
-    );
-    try {
-      await file.writeAsString(content, flush: true);
-      return await channel.invokeMethod<bool>('exportFile', {
-            'path': file.path,
-            'name':
-                '万物备份_${DateTime.now().toIso8601String().substring(0, 19).replaceAll(':', '-')}.json',
-          }) ??
-          false;
-    } finally {
-      if (await file.exists()) await file.delete();
-    }
+    }, filenamePrefix: '万物备份');
   }
 
   static Future<void> cleanStaged(Iterable<String> paths) async {

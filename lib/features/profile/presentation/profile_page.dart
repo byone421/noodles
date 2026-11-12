@@ -115,6 +115,50 @@ class ProfilePage extends StatelessWidget {
                   Icons.upload_file_outlined,
                   color: AppColors.primary,
                 ),
+                title: const Text('导出菜谱数据'),
+                subtitle: const Text('备份菜谱、分类、全部版本和图片'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const DataTransferPage(importing: false, recipes: true),
+                  ),
+                ),
+              ),
+              const Divider(
+                height: 1,
+                indent: 56,
+                endIndent: 16,
+                color: AppColors.border,
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.download_outlined,
+                  color: AppColors.primary,
+                ),
+                title: const Text('导入菜谱数据'),
+                subtitle: const Text('从 JSON 恢复菜谱、版本和图片'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const DataTransferPage(importing: true, recipes: true),
+                  ),
+                ),
+              ),
+              const Divider(
+                height: 1,
+                indent: 56,
+                endIndent: 16,
+                color: AppColors.border,
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.upload_file_outlined,
+                  color: AppColors.primary,
+                ),
                 title: const Text('导出万物数据'),
                 subtitle: const Text('备份物品、分类和图片'),
                 trailing: const Icon(Icons.chevron_right),
