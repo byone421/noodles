@@ -338,18 +338,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 ),
               ),
             ),
-            IconButton(
-              onPressed: () => _perform(
-                () async =>
-                    (await ref.read(repositoryProvider.future))
-                        .toggleFavorite(recipe),
-              ),
-              tooltip: recipe.isFavorite ? '取消收藏' : '收藏',
-              icon: Icon(
-                recipe.isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: AppColors.primary,
-              ),
-            ),
           ],
         ),
         const SizedBox(height: 8),

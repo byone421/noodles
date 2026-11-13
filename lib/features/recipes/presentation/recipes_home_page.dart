@@ -401,6 +401,12 @@ class _RecipesHomePageState extends ConsumerState<RecipesHomePage> {
                 child: recipe.coverImagePath != null
                     ? Image.file(
                         File(recipe.coverImagePath!),
+                        cacheWidth:
+                            (76 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
+                        cacheHeight:
+                            (76 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => _recipeInitial(recipe.title),
                       )

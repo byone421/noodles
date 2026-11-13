@@ -82,6 +82,72 @@ class _InventoryAddItemPageState extends ConsumerState<InventoryAddItemPage> {
     lastDate: DateTime(2100, 12, 31),
   );
 
+  Future<void> _viewImages(int index) async {
+    final controller = PageController(initialPage: index);
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierColor: Colors.black,
+        builder: (context) {
+          var current = index;
+          return StatefulBuilder(
+            builder: (context, setDialogState) => Material(
+              color: Colors.black,
+              child: Stack(
+                children: [
+                  PageView.builder(
+                    controller: controller,
+                    itemCount: imagePaths.length,
+                    onPageChanged: (page) =>
+                        setDialogState(() => current = page),
+                    itemBuilder: (context, page) => Center(
+                      child: InteractiveViewer(
+                        child: Image.file(
+                          File(imagePaths[page]),
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, _, _) => const Icon(
+                            Icons.broken_image_outlined,
+                            color: Colors.white70,
+                            size: 48,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SafeArea(
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: IconButton(
+                        tooltip: '关闭图片预览',
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  if (imagePaths.length > 1)
+                    SafeArea(
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            '${current + 1}/${imagePaths.length}',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } finally {
+      controller.dispose();
+    }
+  }
+
   void _calculateExpiry({bool notify = false}) {
     final value = int.tryParse(duration.text);
     if (productionDate == null ||
@@ -430,17 +496,20 @@ class _InventoryAddItemPageState extends ConsumerState<InventoryAddItemPage> {
                         for (var i = 0; i < imagePaths.length; i++)
                           Stack(
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.file(
-                                  File(imagePaths[i]),
-                                  width: 88,
-                                  height: 88,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => const SizedBox(
+                              GestureDetector(
+                                onTap: () => _viewImages(i),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.file(
+                                    File(imagePaths[i]),
                                     width: 88,
                                     height: 88,
-                                    child: Icon(Icons.broken_image_outlined),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => const SizedBox(
+                                      width: 88,
+                                      height: 88,
+                                      child: Icon(Icons.broken_image_outlined),
+                                    ),
                                   ),
                                 ),
                               ),
