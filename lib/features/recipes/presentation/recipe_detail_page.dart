@@ -10,7 +10,6 @@ import '../../../models/recipe.dart';
 import '../../../providers/recipe_providers.dart';
 import '../../comparison/presentation/version_compare_page.dart';
 import '../../versions/presentation/edit_version_page.dart';
-import 'new_recipe_page.dart';
 
 class RecipeDetailPage extends ConsumerStatefulWidget {
   const RecipeDetailPage({super.key, required this.recipeId});
@@ -45,14 +44,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       if (copy || bundle == null) selectedId = null;
       refresh();
     }
-  }
-
-  Future<void> _editInfo(Recipe recipe) async {
-    final id = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(builder: (_) => NewRecipePage(recipe: recipe)),
-    );
-    if (id != null && mounted) refresh();
   }
 
   Future<void> _compare(List<RecipeVersion> versions) async {
@@ -114,21 +105,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                       strokeWidth: 2,
                     ),
                   ),
-                ),
-              if (recipeAsync.valueOrNull != null)
-                PopupMenuButton<String>(
-                  tooltip: '菜谱管理',
-                  onSelected: (action) {
-                    if (action == 'edit') {
-                      _editInfo(recipeAsync.valueOrNull!);
-                    } else {
-                      _deleteRecipe();
-                    }
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'edit', child: Text('编辑菜谱信息')),
-                    PopupMenuItem(value: 'delete', child: Text('删除菜谱')),
-                  ],
                 ),
             ],
           ),
@@ -653,17 +629,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         if (mounted) selectedId = null;
       });
     }
-  }
-
-  Future<void> _deleteRecipe() async {
-    if (!await _confirm('删除这道菜谱？', '所有版本和相关记录都会永久删除。')) return;
-    if (!mounted) return;
-    await _perform(
-      () async =>
-          (await ref.read(repositoryProvider.future))
-              .deleteRecipe(widget.recipeId),
-      close: true,
-    );
   }
 
   Future<void> _perform(

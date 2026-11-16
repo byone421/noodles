@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:noodles/core/database/recipe_export_service.dart';
+import 'package:noodles/features/profile/presentation/data_transfer_page.dart';
 import 'package:noodles/features/profile/presentation/profile_page.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -199,14 +200,28 @@ void main() {
     },
   );
 
-  testWidgets('profile opens a separate recipe export page', (tester) async {
+  testWidgets('profile hides data transfer menu items', (tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(home: Scaffold(body: ProfilePage())),
       ),
     );
-    await tester.ensureVisible(find.text('导出菜谱数据'));
-    await tester.tap(find.text('导出菜谱数据'));
+    expect(find.text('导出菜谱数据'), findsNothing);
+    expect(find.text('导入菜谱数据'), findsNothing);
+    expect(find.text('导出万物数据'), findsNothing);
+    expect(find.text('导入万物数据'), findsNothing);
+  });
+
+  testWidgets('recipe export page shows backup actions', (tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: DataTransferPage(importing: false, recipes: true),
+          ),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('备份菜谱数据'), findsOneWidget);
     expect(find.text('导出并选择保存位置'), findsOneWidget);

@@ -194,18 +194,18 @@ void main() {
     await screenshot(tester, 'inventory');
     await tester.tap(find.text('7 天内到期'));
     await tester.pumpAndSettle();
-    expect(find.text('筛选结果  2'), findsOneWidget);
+    expect(find.text('筛选结果（2）'), findsOneWidget);
     repository.settings = const ExpirySettings(near: 10);
     container.invalidate(expirySettingsProvider);
     await tester.pumpAndSettle();
     expect(find.text('10 天内到期'), findsOneWidget);
-    expect(find.text('筛选结果  3'), findsOneWidget);
+    expect(find.text('筛选结果（3）'), findsOneWidget);
     await tester.tap(find.text('清除筛选'));
     await tester.pumpAndSettle();
-    expect(find.text('全部物品  5'), findsOneWidget);
+    expect(find.text('全部物品（5）'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '储物柜');
     await tester.pumpAndSettle();
-    expect(find.text('筛选结果  5'), findsOneWidget);
+    expect(find.text('筛选结果（5）'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '不存在');
     await tester.pumpAndSettle();
     expect(find.text('没有找到匹配的物品'), findsOneWidget);
@@ -216,7 +216,7 @@ void main() {
   ) async {
     await pump(tester, const InventoryCategoriesPage());
     await screenshot(tester, 'categories');
-    expect(find.text('2'), findsOneWidget);
+    expect(find.text('2 件'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '储藏');
     await tester.pumpAndSettle();
     expect(find.text('厨房'), findsOneWidget);

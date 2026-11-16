@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../models/recipe.dart';
+import 'accounting_repository.dart';
 import 'inventory_repository.dart';
 
 class RecipeRepository {
@@ -13,80 +14,201 @@ class RecipeRepository {
 
   static Future<RecipeRepository> open() async {
     final dir = await getApplicationDocumentsDirectory();
-    final database = await openDatabase(p.join(dir.path, 'food_log.db'), version: 6, onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'), onUpgrade: (db, oldVersion, _) async {
-      if (oldVersion < 2) await InventoryRepository.createTables(db);
-      if (oldVersion < 3) await _createRecipeCategories(db);
-      if (oldVersion == 3) {
-        await db.execute('ALTER TABLE recipe_categories ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0');
-      }
-      if (oldVersion >= 2 && oldVersion < 5) {
-        await db.execute('ALTER TABLE inventory_items ADD COLUMN updated_at TEXT');
-      }
-      if (oldVersion < 6) {
-        await db.execute("ALTER TABLE finished_records ADD COLUMN image_paths TEXT NOT NULL DEFAULT '[]'");
-      }
-    }, onCreate: (db, _) async {
-      await db.execute('CREATE TABLE recipes (id TEXT PRIMARY KEY, title TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL, cover_image_path TEXT, is_favorite INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)');
-      await db.execute('CREATE TABLE recipe_versions (id TEXT PRIMARY KEY, recipe_id TEXT NOT NULL, version_number INTEGER NOT NULL, title TEXT NOT NULL, note TEXT NOT NULL, rating REAL, is_best INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, FOREIGN KEY(recipe_id) REFERENCES recipes(id) ON DELETE CASCADE)');
-      await db.execute('CREATE TABLE ingredients (id TEXT PRIMARY KEY, version_id TEXT NOT NULL, name TEXT NOT NULL, amount TEXT NOT NULL, unit TEXT NOT NULL, sort_order INTEGER NOT NULL, FOREIGN KEY(version_id) REFERENCES recipe_versions(id) ON DELETE CASCADE)');
-      await db.execute('CREATE TABLE cooking_steps (id TEXT PRIMARY KEY, version_id TEXT NOT NULL, content TEXT NOT NULL, sort_order INTEGER NOT NULL, FOREIGN KEY(version_id) REFERENCES recipe_versions(id) ON DELETE CASCADE)');
-      await db.execute("CREATE TABLE finished_records (id TEXT PRIMARY KEY, version_id TEXT NOT NULL, image_path TEXT, image_paths TEXT NOT NULL DEFAULT '[]', rating REAL, note TEXT NOT NULL, next_improvement TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY(version_id) REFERENCES recipe_versions(id) ON DELETE CASCADE)");
-      await InventoryRepository.createTables(db);
-      await _createRecipeCategories(db);
-    });
+    final database = await openDatabase(
+      p.join(dir.path, 'food_log.db'),
+      version: 8,
+      onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
+      onUpgrade: (db, oldVersion, _) async {
+        if (oldVersion < 2) await InventoryRepository.createTables(db);
+        if (oldVersion < 3) await _createRecipeCategories(db);
+        if (oldVersion == 3) {
+          await db.execute(
+            'ALTER TABLE recipe_categories ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0',
+          );
+        }
+        if (oldVersion >= 2 && oldVersion < 5) {
+          await db.execute(
+            'ALTER TABLE inventory_items ADD COLUMN updated_at TEXT',
+          );
+        }
+        if (oldVersion < 6) {
+          await db.execute(
+            "ALTER TABLE finished_records ADD COLUMN image_paths TEXT NOT NULL DEFAULT '[]'",
+          );
+        }
+        if (oldVersion < 7) await AccountingRepository.createTables(db);
+        if (oldVersion >= 7 && oldVersion < 8) {
+          await db.execute(
+            'ALTER TABLE account_categories ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0',
+          );
+        }
+      },
+      onCreate: (db, _) async {
+        await db.execute(
+          'CREATE TABLE recipes (id TEXT PRIMARY KEY, title TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL, cover_image_path TEXT, is_favorite INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)',
+        );
+        await db.execute(
+          'CREATE TABLE recipe_versions (id TEXT PRIMARY KEY, recipe_id TEXT NOT NULL, version_number INTEGER NOT NULL, title TEXT NOT NULL, note TEXT NOT NULL, rating REAL, is_best INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, FOREIGN KEY(recipe_id) REFERENCES recipes(id) ON DELETE CASCADE)',
+        );
+        await db.execute(
+          'CREATE TABLE ingredients (id TEXT PRIMARY KEY, version_id TEXT NOT NULL, name TEXT NOT NULL, amount TEXT NOT NULL, unit TEXT NOT NULL, sort_order INTEGER NOT NULL, FOREIGN KEY(version_id) REFERENCES recipe_versions(id) ON DELETE CASCADE)',
+        );
+        await db.execute(
+          'CREATE TABLE cooking_steps (id TEXT PRIMARY KEY, version_id TEXT NOT NULL, content TEXT NOT NULL, sort_order INTEGER NOT NULL, FOREIGN KEY(version_id) REFERENCES recipe_versions(id) ON DELETE CASCADE)',
+        );
+        await db.execute(
+          "CREATE TABLE finished_records (id TEXT PRIMARY KEY, version_id TEXT NOT NULL, image_path TEXT, image_paths TEXT NOT NULL DEFAULT '[]', rating REAL, note TEXT NOT NULL, next_improvement TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY(version_id) REFERENCES recipe_versions(id) ON DELETE CASCADE)",
+        );
+        await InventoryRepository.createTables(db);
+        await AccountingRepository.createTables(db);
+        await _createRecipeCategories(db);
+      },
+    );
     return RecipeRepository(database);
   }
 
   static Future<void> _createRecipeCategories(DatabaseExecutor db) async {
-    await db.execute('CREATE TABLE recipe_categories (name TEXT PRIMARY KEY COLLATE NOCASE NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0)');
+    await db.execute(
+      'CREATE TABLE recipe_categories (name TEXT PRIMARY KEY COLLATE NOCASE NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0)',
+    );
     for (final name in ['家常菜', '快手菜', '面食', '汤羹', '烘焙']) {
       await db.insert('recipe_categories', {'name': name});
     }
-    await db.execute("INSERT OR IGNORE INTO recipe_categories(name) SELECT DISTINCT TRIM(category) FROM recipes WHERE TRIM(category) != '' AND TRIM(category) != '未分类'");
-    await db.execute("UPDATE recipes SET category = (SELECT c.name FROM recipe_categories c WHERE lower(trim(recipes.category)) = lower(c.name) LIMIT 1) WHERE EXISTS (SELECT 1 FROM recipe_categories c WHERE lower(trim(recipes.category)) = lower(c.name))");
-    await db.execute("UPDATE recipes SET category = '未分类' WHERE trim(category) IN ('', '未分类')");
+    await db.execute(
+      "INSERT OR IGNORE INTO recipe_categories(name) SELECT DISTINCT TRIM(category) FROM recipes WHERE TRIM(category) != '' AND TRIM(category) != '未分类'",
+    );
+    await db.execute(
+      "UPDATE recipes SET category = (SELECT c.name FROM recipe_categories c WHERE lower(trim(recipes.category)) = lower(c.name) LIMIT 1) WHERE EXISTS (SELECT 1 FROM recipe_categories c WHERE lower(trim(recipes.category)) = lower(c.name))",
+    );
+    await db.execute(
+      "UPDATE recipes SET category = '未分类' WHERE trim(category) IN ('', '未分类')",
+    );
   }
 
   Future<Map<String, int>> listRecipeCategoryOrders() async => {
-    for (final row in await db.query('recipe_categories', orderBy: 'sort_order, rowid'))
+    for (final row in await db.query(
+      'recipe_categories',
+      orderBy: 'sort_order, rowid',
+    ))
       row['name'] as String: row['sort_order'] as int,
   };
 
   Future<List<String>> listRecipeCategories() async =>
       (await listRecipeCategoryOrders()).keys.toList();
 
-  Future<void> saveRecipeCategory(String name, {String? previous, int? sortOrder}) async {
+  Future<void> saveRecipeCategory(
+    String name, {
+    String? previous,
+    int? sortOrder,
+  }) async {
     final value = name.trim();
-    if (value.isEmpty || value == '未分类') throw ArgumentError('请输入分类名称，“未分类”为保留名称');
+    if (value.isEmpty || value == '未分类')
+      throw ArgumentError('请输入分类名称，“未分类”为保留名称');
     if (sortOrder != null && (sortOrder < 0 || sortOrder > 999999999)) {
       throw ArgumentError('排序须为 0–999999999 的整数');
     }
     await db.transaction((tx) async {
-      final duplicates = await tx.query('recipe_categories', where: 'name = ? AND name != ?', whereArgs: [value, previous ?? '']);
+      final duplicates = await tx.query(
+        'recipe_categories',
+        where: 'name = ? AND name != ?',
+        whereArgs: [value, previous ?? ''],
+      );
       if (duplicates.isNotEmpty) throw ArgumentError('该分类已存在');
       if (previous == null) {
-        await tx.insert('recipe_categories', {'name': value, 'sort_order': sortOrder ?? 0});
-      } else {
-        await tx.update('recipe_categories', {
+        await tx.insert('recipe_categories', {
           'name': value,
-          if (sortOrder != null) 'sort_order': sortOrder,
-        }, where: 'name = ?', whereArgs: [previous]);
-        await tx.update('recipes', {'category': value}, where: 'category = ?', whereArgs: [previous]);
+          'sort_order': sortOrder ?? 0,
+        });
+      } else {
+        await tx.update(
+          'recipe_categories',
+          {'name': value, if (sortOrder != null) 'sort_order': sortOrder},
+          where: 'name = ?',
+          whereArgs: [previous],
+        );
+        await tx.update(
+          'recipes',
+          {'category': value},
+          where: 'category = ?',
+          whereArgs: [previous],
+        );
       }
     });
   }
 
   Future<void> deleteRecipeCategory(String name) async {
     await db.transaction((tx) async {
-      await tx.update('recipes', {'category': '未分类'}, where: 'category = ?', whereArgs: [name]);
-      await tx.delete('recipe_categories', where: 'name = ?', whereArgs: [name]);
+      await tx.update(
+        'recipes',
+        {'category': '未分类'},
+        where: 'category = ?',
+        whereArgs: [name],
+      );
+      await tx.delete(
+        'recipe_categories',
+        where: 'name = ?',
+        whereArgs: [name],
+      );
     });
   }
 
-  Future<List<Recipe>> listRecipes() async => (await db.query('recipes', orderBy: 'updated_at DESC')).map(Recipe.fromMap).toList();
-  Future<Recipe?> getRecipe(String id) async { final rows = await db.query('recipes', where: 'id = ?', whereArgs: [id], limit: 1); return rows.isEmpty ? null : Recipe.fromMap(rows.first); }
-  Future<List<RecipeVersion>> versions(String recipeId) async => (await db.query('recipe_versions', where: 'recipe_id = ?', whereArgs: [recipeId], orderBy: 'version_number DESC')).map(RecipeVersion.fromMap).toList();
-  Future<VersionBundle?> bundle(String versionId) async { final v = await db.query('recipe_versions', where: 'id = ?', whereArgs: [versionId], limit: 1); if (v.isEmpty) return null; final ingredients = (await db.query('ingredients', where: 'version_id = ?', whereArgs: [versionId], orderBy: 'sort_order')).map(Ingredient.fromMap).toList(); final steps = (await db.query('cooking_steps', where: 'version_id = ?', whereArgs: [versionId], orderBy: 'sort_order')).map(CookingStep.fromMap).toList(); final records = await db.query('finished_records', where: 'version_id = ?', whereArgs: [versionId], orderBy: 'created_at DESC', limit: 1); return VersionBundle(version: RecipeVersion.fromMap(v.first), ingredients: ingredients, steps: steps, finishedRecord: records.isEmpty ? null : FinishedRecord.fromMap(records.first)); }
+  Future<List<Recipe>> listRecipes() async => (await db.query(
+    'recipes',
+    orderBy: 'updated_at DESC',
+  )).map(Recipe.fromMap).toList();
+  Future<Recipe?> getRecipe(String id) async {
+    final rows = await db.query(
+      'recipes',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : Recipe.fromMap(rows.first);
+  }
+
+  Future<List<RecipeVersion>> versions(String recipeId) async =>
+      (await db.query(
+        'recipe_versions',
+        where: 'recipe_id = ?',
+        whereArgs: [recipeId],
+        orderBy: 'version_number DESC',
+      )).map(RecipeVersion.fromMap).toList();
+  Future<VersionBundle?> bundle(String versionId) async {
+    final v = await db.query(
+      'recipe_versions',
+      where: 'id = ?',
+      whereArgs: [versionId],
+      limit: 1,
+    );
+    if (v.isEmpty) return null;
+    final ingredients = (await db.query(
+      'ingredients',
+      where: 'version_id = ?',
+      whereArgs: [versionId],
+      orderBy: 'sort_order',
+    )).map(Ingredient.fromMap).toList();
+    final steps = (await db.query(
+      'cooking_steps',
+      where: 'version_id = ?',
+      whereArgs: [versionId],
+      orderBy: 'sort_order',
+    )).map(CookingStep.fromMap).toList();
+    final records = await db.query(
+      'finished_records',
+      where: 'version_id = ?',
+      whereArgs: [versionId],
+      orderBy: 'created_at DESC',
+      limit: 1,
+    );
+    return VersionBundle(
+      version: RecipeVersion.fromMap(v.first),
+      ingredients: ingredients,
+      steps: steps,
+      finishedRecord: records.isEmpty
+          ? null
+          : FinishedRecord.fromMap(records.first),
+    );
+  }
 
   Future<String> createRecipe({
     required String title,
@@ -148,16 +270,25 @@ class RecipeRepository {
     return recipeId;
   }
 
-  Future<void> updateRecipe({required String id, required String title,
-    required String category, required String description}) async {
+  Future<void> updateRecipe({
+    required String id,
+    required String title,
+    required String category,
+    required String description,
+  }) async {
     if (title.trim().isEmpty) throw ArgumentError('请输入菜谱名称');
     final categories = await listRecipeCategories();
-    final changed = await db.update('recipes', {
-      'title': title.trim(),
-      'category': categories.contains(category) ? category : '未分类',
-      'description': description.trim(),
-      'updated_at': DateTime.now().toIso8601String(),
-    }, where: 'id = ?', whereArgs: [id]);
+    final changed = await db.update(
+      'recipes',
+      {
+        'title': title.trim(),
+        'category': categories.contains(category) ? category : '未分类',
+        'description': description.trim(),
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     if (changed == 0) throw StateError('菜谱不存在');
   }
 
@@ -314,8 +445,34 @@ class RecipeRepository {
     }
   }
 
-  Future<void> toggleFavorite(Recipe recipe) => db.update('recipes', {'is_favorite': recipe.isFavorite ? 0 : 1, 'updated_at': DateTime.now().toIso8601String()}, where: 'id = ?', whereArgs: [recipe.id]).then((_) {});
-  Future<void> markBest(String versionId, String recipeId) async { await db.transaction((tx) async { await tx.update('recipe_versions', {'is_best': 0}, where: 'recipe_id = ?', whereArgs: [recipeId]); await tx.update('recipe_versions', {'is_best': 1}, where: 'id = ?', whereArgs: [versionId]); }); }
+  Future<void> toggleFavorite(Recipe recipe) => db
+      .update(
+        'recipes',
+        {
+          'is_favorite': recipe.isFavorite ? 0 : 1,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [recipe.id],
+      )
+      .then((_) {});
+  Future<void> markBest(String versionId, String recipeId) async {
+    await db.transaction((tx) async {
+      await tx.update(
+        'recipe_versions',
+        {'is_best': 0},
+        where: 'recipe_id = ?',
+        whereArgs: [recipeId],
+      );
+      await tx.update(
+        'recipe_versions',
+        {'is_best': 1},
+        where: 'id = ?',
+        whereArgs: [versionId],
+      );
+    });
+  }
+
   Future<void> deleteVersion(String id) async {
     final rows = await db.query(
       'finished_records',
@@ -343,6 +500,85 @@ class RecipeRepository {
     );
     await db.delete('recipes', where: 'id = ?', whereArgs: [id]);
     await _deleteImages(rows);
+  }
+
+  Future<String> copyRecipe(String id) async {
+    final recipe = await getRecipe(id);
+    if (recipe == null) throw StateError('菜谱不存在');
+    final sourceVersions = await versions(id);
+    final sourceData = [
+      for (final version in sourceVersions)
+        (
+          version: version,
+          ingredients: await db.query(
+            'ingredients',
+            where: 'version_id = ?',
+            whereArgs: [version.id],
+            orderBy: 'sort_order',
+          ),
+          steps: await db.query(
+            'cooking_steps',
+            where: 'version_id = ?',
+            whereArgs: [version.id],
+            orderBy: 'sort_order',
+          ),
+          records: await db.query(
+            'finished_records',
+            where: 'version_id = ?',
+            whereArgs: [version.id],
+          ),
+        ),
+    ];
+    final now = DateTime.now();
+    final newId = '${now.microsecondsSinceEpoch}_copy';
+    await db.transaction((tx) async {
+      final recipeValues = recipe.toMap()
+        ..['id'] = newId
+        ..['title'] = '${recipe.title} 副本'
+        ..['created_at'] = now.toIso8601String()
+        ..['updated_at'] = now.toIso8601String();
+      await tx.insert(
+        'recipes',
+        recipeValues,
+      );
+      for (final data in sourceData) {
+        final source = data.version;
+        final newVersionId = '${newId}_v${source.versionNumber}';
+        await tx.insert(
+          'recipe_versions',
+          source.toMap()
+            ..['id'] = newVersionId
+            ..['recipe_id'] = newId
+            ..['created_at'] = now.toIso8601String()
+            ..['updated_at'] = now.toIso8601String(),
+        );
+        for (final ingredient in data.ingredients) {
+          await tx.insert(
+            'ingredients',
+            Map<String, Object?>.from(ingredient)
+              ..['id'] = '${newVersionId}_i${ingredient['sort_order']}'
+              ..['version_id'] = newVersionId,
+          );
+        }
+        for (final step in data.steps) {
+          await tx.insert(
+            'cooking_steps',
+            Map<String, Object?>.from(step)
+              ..['id'] = '${newVersionId}_s${step['sort_order']}'
+              ..['version_id'] = newVersionId,
+          );
+        }
+        for (var index = 0; index < data.records.length; index++) {
+          await tx.insert(
+            'finished_records',
+            Map<String, Object?>.from(data.records[index])
+              ..['id'] = '${newVersionId}_record_$index'
+              ..['version_id'] = newVersionId,
+          );
+        }
+      }
+    });
+    return newId;
   }
 
   Future<void> _deleteImages(List<Map<String, Object?>> rows) async {
@@ -381,12 +617,38 @@ class RecipeRepository {
   }
 
   Future<Map<String, int>> stats() async {
-    final recipes = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM recipes')) ?? 0;
-    final versions = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM recipe_versions')) ?? 0;
-    final favorites = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM recipes WHERE is_favorite = 1')) ?? 0;
-    final best = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM recipe_versions WHERE is_best = 1')) ?? 0;
-    return {'recipes': recipes, 'versions': versions, 'favorites': favorites, 'best': best};
+    final recipes =
+        Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM recipes'),
+        ) ??
+        0;
+    final versions =
+        Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM recipe_versions'),
+        ) ??
+        0;
+    final favorites =
+        Sqflite.firstIntValue(
+          await db.rawQuery(
+            'SELECT COUNT(*) FROM recipes WHERE is_favorite = 1',
+          ),
+        ) ??
+        0;
+    final best =
+        Sqflite.firstIntValue(
+          await db.rawQuery(
+            'SELECT COUNT(*) FROM recipe_versions WHERE is_best = 1',
+          ),
+        ) ??
+        0;
+    return {
+      'recipes': recipes,
+      'versions': versions,
+      'favorites': favorites,
+      'best': best,
+    };
   }
+
   Future<void> clearAll() async {
     final rows = await db.query('finished_records');
     await db.transaction((tx) => tx.delete('recipes'));

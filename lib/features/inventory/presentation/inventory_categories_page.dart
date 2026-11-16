@@ -112,18 +112,6 @@ class _InventoryCategoriesPageState
                   ),
                 ),
                 const SizedBox(height: 10),
-                if (widget.selectMode)
-                  Card(
-                    elevation: 0,
-                    child: ListTile(
-                      title: const Text('未分类'),
-                      leading: const Icon(Icons.inventory_2_outlined),
-                      onTap: () => Navigator.pop(
-                        context,
-                        const InventoryCategory(name: '未分类'),
-                      ),
-                    ),
-                  ),
                 if (filtered.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 36),
@@ -162,6 +150,7 @@ class _InventoryCategoriesPageState
                         category.name,
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
+                      subtitle: Text('排序 ${category.sortOrder}'),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -172,7 +161,7 @@ class _InventoryCategoriesPageState
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '${category.itemCount}',
+                              '${category.itemCount} 件',
                               style: const TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w800,

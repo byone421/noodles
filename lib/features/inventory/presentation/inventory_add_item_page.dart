@@ -11,6 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../models/inventory_item.dart';
 import '../../../models/inventory_settings.dart';
 import '../../../providers/inventory_providers.dart';
+import '../../accounting/presentation/accounting_page.dart';
 import 'inventory_categories_page.dart';
 
 class InventoryAddItemPage extends ConsumerStatefulWidget {
@@ -307,7 +308,6 @@ class _InventoryAddItemPageState extends ConsumerState<InventoryAddItemPage> {
       committed = true;
       if (!mounted) return;
       refreshInventory(ref);
-      Navigator.pop(context);
     } catch (_) {
       if (!committed) {
         for (final path in copied) {
@@ -321,6 +321,43 @@ class _InventoryAddItemPageState extends ConsumerState<InventoryAddItemPage> {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('保存失败，内容已保留，请重试')));
       }
+      return;
+    }
+    if (!mounted) return;
+    final syncToAccounting = purchasePrice.text.trim().isNotEmpty
+        ? await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('同步到记账？'),
+              content: const Text('物品已保存，是否将物品金额同步到记账？'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('暂不同步'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('去记账'),
+                ),
+              ],
+            ),
+          )
+        : false;
+    if (!mounted) return;
+    if (syncToAccounting == true) {
+      final initialAmount = purchasePrice.text.trim();
+      final initialNote = name.text.trim();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AccountEntryPage(
+            initialAmount: initialAmount,
+            initialNote: initialNote,
+          ),
+        ),
+      );
+    } else {
+      Navigator.pop(context);
     }
   }
 
@@ -467,7 +504,7 @@ class _InventoryAddItemPageState extends ConsumerState<InventoryAddItemPage> {
                     ),
                     _input('存放位置', location, hint: '例如：厨房、储物柜'),
                     _input(
-                      '购买金额',
+                      '物品金额',
                       purchasePrice,
                       hint: '选填',
                       keyboard: const TextInputType.numberWithOptions(

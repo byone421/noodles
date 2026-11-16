@@ -112,15 +112,6 @@ class _RecipeCategoriesPageState extends ConsumerState<RecipeCategoriesPage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                if (widget.selectMode)
-                  Card(
-                    elevation: 0,
-                    child: ListTile(
-                      title: const Text('未分类'),
-                      leading: const Icon(Icons.menu_book_outlined),
-                      onTap: () => Navigator.pop(context, '未分类'),
-                    ),
-                  ),
                 if (filtered.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 36),
@@ -159,6 +150,7 @@ class _RecipeCategoriesPageState extends ConsumerState<RecipeCategoriesPage> {
                         name,
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
+                      subtitle: Text('排序 ${categories[name]}'),
                       onTap: () => Navigator.pop(context, name),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -172,7 +164,7 @@ class _RecipeCategoriesPageState extends ConsumerState<RecipeCategoriesPage> {
                             child: Text(
                               recipes == null
                                   ? '…'
-                                  : '${recipes.where((recipe) => recipe.category == name).length}',
+                                  : '${recipes.where((recipe) => recipe.category == name).length} 道',
                               style: const TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w800,

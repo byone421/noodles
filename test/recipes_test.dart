@@ -220,6 +220,8 @@ void main() {
       final store = RecipeStore();
       await pump(tester, const RecipesHomePage(), store);
       expect(find.text('掌勺人'), findsOneWidget);
+      expect(find.text('我的菜谱（3）'), findsOneWidget);
+      expect(find.textContaining('道菜谱'), findsNothing);
       expect(find.textContaining('仅看收藏'), findsNothing);
       expect(find.text('管理分类'), findsNothing);
       expect(find.byType(ChoiceChip), findsNothing);
@@ -229,14 +231,15 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('面食'));
       await tester.pumpAndSettle();
-      expect(find.text('共 2 道菜谱'), findsOneWidget);
+      expect(find.text('筛选结果（2）'), findsOneWidget);
       expect(find.text('蔬菜汤'), findsNothing);
       await tester.enterText(find.byType(TextField).first, '不存在');
       await tester.pumpAndSettle();
       expect(find.text('没有找到匹配的菜谱'), findsOneWidget);
+      expect(find.text('筛选结果（0）'), findsOneWidget);
       await tester.tap(find.byTooltip('清除筛选'));
       await tester.pumpAndSettle();
-      expect(find.text('共 3 道菜谱'), findsOneWidget);
+      expect(find.text('我的菜谱（3）'), findsOneWidget);
       expect(find.byTooltip('收藏'), findsNothing);
       expect(find.byTooltip('取消收藏'), findsNothing);
       await tester.tap(find.text('万物'));
@@ -262,7 +265,7 @@ void main() {
       await tester.tap(find.text('面食'));
       await tester.pumpAndSettle();
       expect(find.text('掌勺人'), findsOneWidget);
-      expect(find.text('共 2 道菜谱'), findsOneWidget);
+      expect(find.text('筛选结果（2）'), findsOneWidget);
       expect(find.text('番茄面'), findsOneWidget);
       expect(find.text('拌面'), findsOneWidget);
       expect(find.text('蔬菜汤'), findsNothing);

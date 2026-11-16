@@ -29,6 +29,10 @@ abstract final class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: AppColors.background,
       fontFamily: 'sans',
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
       appBarTheme: const AppBarThemeData(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,

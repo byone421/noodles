@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/active_filter_bar.dart';
 import '../../../models/inventory_item.dart';
 import '../../../models/inventory_settings.dart';
 import '../../../providers/inventory_providers.dart';
@@ -34,6 +35,13 @@ class _InventoryHomePageState extends ConsumerState<InventoryHomePage>
   _InventorySort sort = _InventorySort.created;
   late int? selectedCategory = widget.initialCategoryId;
   Timer? dayTimer;
+
+  void _clearFilters() => setState(() {
+    selectedRange = null;
+    selectedCategory = null;
+    search.clear();
+  });
+
   @override
   void initState() {
     super.initState();
@@ -171,7 +179,7 @@ class _InventoryHomePageState extends ConsumerState<InventoryHomePage>
           ),
           Text(
             '掌控万物',
-            style: Theme.of(context).textTheme.headlineLarge
+            style: Theme.of(context).textTheme.headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 16),
@@ -184,6 +192,29 @@ class _InventoryHomePageState extends ConsumerState<InventoryHomePage>
             ),
           ),
           const SizedBox(height: 14),
+          ActiveFilterBar(
+            filters: [
+              if (categoryName != null)
+                (
+                  label: '分类：$categoryName',
+                  clearTooltip: '清除分类筛选',
+                  onClear: () => setState(() => selectedCategory = null),
+                ),
+              if (search.text.trim().isNotEmpty)
+                (
+                  label: '搜索：${search.text.trim()}',
+                  clearTooltip: '清除搜索',
+                  onClear: () => setState(() => search.clear()),
+                ),
+              if (range != null)
+                (
+                  label: range == -1 ? '到期：已过期' : '到期：$range 天内到期',
+                  clearTooltip: '清除到期筛选',
+                  onClear: () => setState(() => selectedRange = null),
+                ),
+            ],
+            onClear: _clearFilters,
+          ),
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -231,11 +262,11 @@ class _InventoryHomePageState extends ConsumerState<InventoryHomePage>
             children: [
               Expanded(
                 child: Text(
-                  categoryName != null
-                      ? '$categoryName  ${filtered.length}'
-                      : selectedRange == null && search.text.trim().isEmpty
-                      ? '全部物品  ${filtered.length}'
-                      : '筛选结果  ${filtered.length}',
+                  categoryId == null &&
+                          selectedRange == null &&
+                          search.text.trim().isEmpty
+                      ? '全部物品（${filtered.length}）'
+                      : '筛选结果（${filtered.length}）',
                   style: Theme.of(context).textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.w800),
                 ),
@@ -280,21 +311,6 @@ class _InventoryHomePageState extends ConsumerState<InventoryHomePage>
             ],
           ),
           const SizedBox(height: 8),
-          if (selectedRange != null ||
-              categoryId != null ||
-              search.text.isNotEmpty)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => setState(() {
-                  selectedRange = null;
-                  selectedCategory = null;
-                  search.clear();
-                }),
-                icon: const Icon(Icons.filter_alt_off_outlined, size: 16),
-                label: const Text('清除筛选'),
-              ),
-            ),
           if (filtered.isEmpty)
             _empty()
           else

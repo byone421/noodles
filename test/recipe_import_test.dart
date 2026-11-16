@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:noodles/core/database/recipe_export_service.dart';
 import 'package:noodles/core/database/recipe_import_service.dart';
 import 'package:noodles/core/database/recipe_repository.dart';
-import 'package:noodles/features/profile/presentation/profile_page.dart';
+import 'package:noodles/features/profile/presentation/data_transfer_page.dart';
 import 'package:noodles/models/recipe_transfer.dart';
 import 'package:noodles/providers/recipe_providers.dart';
 import 'package:sqflite/sqflite.dart';
@@ -229,11 +229,13 @@ void main() {
           overrides: [
             repositoryProvider.overrideWith((_) async => RecipeRepository(db)),
           ],
-          child: const MaterialApp(home: Scaffold(body: ProfilePage())),
+          child: const MaterialApp(
+            home: Scaffold(
+              body: DataTransferPage(importing: true, recipes: true),
+            ),
+          ),
         ),
       );
-      await tester.ensureVisible(find.text('导入菜谱数据'));
-      await tester.tap(find.text('导入菜谱数据'));
       await tester.pumpAndSettle();
       await performAndWait(
         () => tester.tap(find.text('选择菜谱备份 JSON')),

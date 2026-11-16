@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../models/account_entry.dart';
 import '../../../models/inventory_settings.dart';
+import '../../accounting/presentation/account_categories_page.dart';
 import '../../inventory/presentation/inventory_categories_page.dart';
 import 'expiry_days_page.dart';
 import 'recipe_categories_page.dart';
-import 'data_transfer_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({
     super.key,
     this.onInventoryCategorySelected,
     this.onRecipeCategorySelected,
+    this.onAccountCategorySelected,
   });
   final ValueChanged<InventoryCategory>? onInventoryCategorySelected;
   final ValueChanged<String>? onRecipeCategorySelected;
+  final ValueChanged<AccountCategory>? onAccountCategorySelected;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +34,7 @@ class ProfilePage extends StatelessWidget {
         ),
         Text(
           '我的',
-          style: Theme.of(context).textTheme.headlineLarge
+          style: Theme.of(context).textTheme.headlineSmall
               ?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 20),
@@ -93,6 +96,32 @@ class ProfilePage extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(
+                  Icons.receipt_long_outlined,
+                  color: AppColors.primary,
+                ),
+                title: const Text('记账分类设置'),
+                subtitle: const Text('管理支出和收入的分类及排序'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  final category = await Navigator.push<AccountCategory>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AccountCategoriesPage(),
+                    ),
+                  );
+                  if (category != null && context.mounted) {
+                    onAccountCategorySelected?.call(category);
+                  }
+                },
+              ),
+              const Divider(
+                height: 1,
+                indent: 56,
+                endIndent: 16,
+                color: AppColors.border,
+              ),
+              ListTile(
+                leading: const Icon(
                   Icons.event_available_outlined,
                   color: AppColors.primary,
                 ),
@@ -102,92 +131,6 @@ class ProfilePage extends StatelessWidget {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const ExpiryDaysPage()),
-                ),
-              ),
-              const Divider(
-                height: 1,
-                indent: 56,
-                endIndent: 16,
-                color: AppColors.border,
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.upload_file_outlined,
-                  color: AppColors.primary,
-                ),
-                title: const Text('导出菜谱数据'),
-                subtitle: const Text('备份菜谱、分类、全部版本和图片'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const DataTransferPage(importing: false, recipes: true),
-                  ),
-                ),
-              ),
-              const Divider(
-                height: 1,
-                indent: 56,
-                endIndent: 16,
-                color: AppColors.border,
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.download_outlined,
-                  color: AppColors.primary,
-                ),
-                title: const Text('导入菜谱数据'),
-                subtitle: const Text('从 JSON 恢复菜谱、版本和图片'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const DataTransferPage(importing: true, recipes: true),
-                  ),
-                ),
-              ),
-              const Divider(
-                height: 1,
-                indent: 56,
-                endIndent: 16,
-                color: AppColors.border,
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.upload_file_outlined,
-                  color: AppColors.primary,
-                ),
-                title: const Text('导出万物数据'),
-                subtitle: const Text('备份物品、分类和图片'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const DataTransferPage(importing: false),
-                  ),
-                ),
-              ),
-              const Divider(
-                height: 1,
-                indent: 56,
-                endIndent: 16,
-                color: AppColors.border,
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.download_outlined,
-                  color: AppColors.primary,
-                ),
-                title: const Text('导入万物数据'),
-                subtitle: const Text('兼容老项目 CSV 和万物备份'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const DataTransferPage(importing: true),
-                  ),
                 ),
               ),
             ],

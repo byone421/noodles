@@ -158,7 +158,7 @@ void main() {
       expect(find.byType(RecipeDetailPage), findsNothing);
       expect(find.text('掌勺人'), findsOneWidget);
       expect(find.text('新菜谱'), findsOneWidget);
-      expect(find.text('共 4 道菜谱'), findsOneWidget);
+      expect(find.text('我的菜谱（4）'), findsOneWidget);
       expect(find.text('菜谱已创建'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },

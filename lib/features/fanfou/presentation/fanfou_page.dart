@@ -111,9 +111,11 @@ class _FanfouPageState extends ConsumerState<FanfouPage> {
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           '今天吃点什么？',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
         ),
         const SizedBox(height: 6),
         const Text('从拿手菜里，找一点新鲜感。', style: TextStyle(color: AppColors.muted)),
