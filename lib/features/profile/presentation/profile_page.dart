@@ -25,7 +25,7 @@ class ProfilePage extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       children: [
         Text(
-          '个人设置',
+          '我的',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
             color: AppColors.primary,
             letterSpacing: 1.2,
@@ -33,7 +33,7 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
         Text(
-          '我的',
+          '生活，越热爱越美好',
           style: Theme.of(context).textTheme.headlineSmall
               ?.copyWith(fontWeight: FontWeight.w800),
         ),

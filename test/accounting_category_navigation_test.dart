@@ -106,7 +106,7 @@ void main() {
       expect(find.text('分类：${isExpense ? '支出' : '收入'} · 其他'), findsOneWidget);
       expect(find.text('收支明细（1）'), findsOneWidget);
       expect(find.byType(Dismissible), findsOneWidget);
-      expect(find.byKey(ValueKey(isExpense ? 1 : 2)), findsOneWidget);
+      expect(find.byKey(ValueKey<int?>(isExpense ? 1 : 2)), findsOneWidget);
       expect(find.text(isExpense ? '¥1.00' : '¥2.00'), findsNWidgets(2));
       expect(find.text('¥0.00'), findsOneWidget);
 
@@ -118,16 +118,76 @@ void main() {
 
       await selectCategory(type);
       expect(find.text('收支明细（1）'), findsOneWidget);
-      expect(find.byKey(ValueKey(isExpense ? 1 : 2)), findsOneWidget);
+      expect(find.byKey(ValueKey<int?>(isExpense ? 1 : 2)), findsOneWidget);
 
       await selectCategory(
         isExpense ? AccountType.income : AccountType.expense,
       );
       expect(find.text('收支明细（1）'), findsOneWidget);
-      expect(find.byKey(ValueKey(isExpense ? 2 : 1)), findsOneWidget);
+      expect(find.byKey(ValueKey<int?>(isExpense ? 2 : 1)), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('top filters combine date, category and payment method', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final inRange = DateTime(now.year, now.month, 1);
+    final outOfRange = DateTime(now.year, now.month, 0);
+    await pumpPage(tester, const Scaffold(body: AccountingPage()), [
+      for (final (id, category, date, payment) in [
+        (1, categories[0], inRange, '微信'),
+        (2, categories[1], inRange, '微信'),
+        (3, categories[1], inRange, '现金'),
+        (4, categories[1], outOfRange, '微信'),
+        (5, categories[2], inRange, null),
+      ])
+        AccountEntry(
+          id: id,
+          type: category.type,
+          amountCents: id * 100,
+          categoryId: category.id,
+          category: category.name,
+          date: date,
+          note: '',
+          paymentMethod: payment,
+        ),
+    ]);
+    await tester.tap(find.text('分类'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('收入分类'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('其他'));
+    await tester.pumpAndSettle();
+    expect(find.text('分类：收入 · 其他'), findsOneWidget);
+    expect(find.text('收支明细（2）'), findsOneWidget);
+
+    Future<void> selectWeChat() async {
+      await tester.tap(find.text('支付方式'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(MenuItemButton, '微信'));
+      await tester.pumpAndSettle();
+    }
+
+    await selectWeChat();
+    expect(find.text('支付方式：微信'), findsOneWidget);
+    expect(find.text('收支明细（1）'), findsOneWidget);
+    expect(find.text('¥2.00'), findsNWidgets(2));
+    expect(find.text('¥0.00'), findsOneWidget);
+    expect(find.byKey(const ValueKey<int?>(2)), findsOneWidget);
+
+    await tester.tap(find.byTooltip('清除支付方式筛选'));
+    await tester.pumpAndSettle();
+    expect(find.text('分类：收入 · 其他'), findsOneWidget);
+    expect(find.text('收支明细（2）'), findsOneWidget);
+
+    await selectWeChat();
+    await tester.tap(find.byTooltip('清除筛选'));
+    await tester.pumpAndSettle();
+    expect(find.byType(InputChip), findsNothing);
+    expect(find.text('收支明细（4）'), findsOneWidget);
+  });
 
   testWidgets('empty category filter is visible and can be cleared', (
     tester,

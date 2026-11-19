@@ -30,6 +30,7 @@ class AccountEntry {
     required this.category,
     required this.date,
     required this.note,
+    this.paymentMethod,
   });
 
   final int? id;
@@ -39,6 +40,7 @@ class AccountEntry {
   final String category;
   final DateTime date;
   final String note;
+  final String? paymentMethod;
 
   factory AccountEntry.fromMap(Map<String, Object?> map) => AccountEntry(
     id: map['id'] as int,
@@ -48,5 +50,6 @@ class AccountEntry {
     category: map['category'] as String? ?? '未分类',
     date: DateTime.parse(map['date'] as String),
     note: map['note'] as String,
+    paymentMethod: map['payment_method'] as String?,
   );
 }

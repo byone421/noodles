@@ -9,6 +9,8 @@ import '../../../models/account_entry.dart';
 import '../../../providers/accounting_providers.dart';
 import 'account_categories_page.dart';
 
+const _paymentMethods = ['微信', '支付宝', '亲密付', '银行卡', '信用卡', '云闪付', '零钱', '现金'];
+
 class AccountingPage extends ConsumerStatefulWidget {
   const AccountingPage({super.key, this.initialCategory});
 
@@ -20,6 +22,7 @@ class AccountingPage extends ConsumerStatefulWidget {
 
 class _AccountingPageState extends ConsumerState<AccountingPage> {
   late AccountCategory? selectedCategory = widget.initialCategory;
+  String? selectedPaymentMethod;
   late DateTime start = DateTime(DateTime.now().year, DateTime.now().month);
   late DateTime end = DateTime(
     DateTime.now().year,
@@ -43,6 +46,18 @@ class _AccountingPageState extends ConsumerState<AccountingPage> {
         start = value.start;
         end = value.end;
       });
+    }
+  }
+
+  Future<void> _chooseCategory() async {
+    final category = await Navigator.push<AccountCategory>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AccountCategoriesPage(selectMode: true),
+      ),
+    );
+    if (category != null && mounted) {
+      setState(() => selectedCategory = category);
     }
   }
 
@@ -75,12 +90,14 @@ class _AccountingPageState extends ConsumerState<AccountingPage> {
         ),
         data: (allEntries) {
           final category = selectedCategory;
+          final payment = selectedPaymentMethod;
           final entries = allEntries
               .where(
                 (entry) =>
-                    category == null ||
-                    (entry.type == category.type &&
-                        entry.categoryId == category.id),
+                    (category == null ||
+                        (entry.type == category.type &&
+                            entry.categoryId == category.id)) &&
+                    (payment == null || entry.paymentMethod == payment),
               )
               .toList();
           final expense = entries
@@ -132,6 +149,37 @@ class _AccountingPageState extends ConsumerState<AccountingPage> {
                         side: const BorderSide(color: AppColors.border),
                       ),
                     ),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _chooseCategory,
+                          icon: const Icon(Icons.category_outlined),
+                          label: const Text('分类'),
+                        ),
+                        MenuAnchor(
+                          menuChildren: [
+                            for (final method in _paymentMethods)
+                              MenuItemButton(
+                                onPressed: () => setState(
+                                  () => selectedPaymentMethod = method,
+                                ),
+                                trailingIcon: payment == method
+                                    ? const Icon(Icons.check)
+                                    : null,
+                                child: Text(method),
+                              ),
+                          ],
+                          builder: (_, controller, _) => OutlinedButton.icon(
+                            onPressed: () => controller.isOpen
+                                ? controller.close()
+                                : controller.open(),
+                            icon: const Icon(Icons.payments_outlined),
+                            label: const Text('支付方式'),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
                     ActiveFilterBar(
                       filters: [
@@ -143,8 +191,18 @@ class _AccountingPageState extends ConsumerState<AccountingPage> {
                             onClear: () =>
                                 setState(() => selectedCategory = null),
                           ),
+                        if (payment != null)
+                          (
+                            label: '支付方式：$payment',
+                            clearTooltip: '清除支付方式筛选',
+                            onClear: () =>
+                                setState(() => selectedPaymentMethod = null),
+                          ),
                       ],
-                      onClear: () => setState(() => selectedCategory = null),
+                      onClear: () => setState(() {
+                        selectedCategory = null;
+                        selectedPaymentMethod = null;
+                      }),
                     ),
                     Row(
                       children: [
@@ -168,10 +226,12 @@ class _AccountingPageState extends ConsumerState<AccountingPage> {
                     const SizedBox(height: 20),
                     _sectionTitle('分类统计'),
                     if (grouped.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 18),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 18),
                         child: Text(
-                          '所选日期内还没有记录',
+                          category == null && payment == null
+                              ? '所选日期内还没有记录'
+                              : '没有符合筛选条件的记录',
                           style: TextStyle(color: AppColors.muted),
                         ),
                       )
@@ -203,7 +263,11 @@ class _AccountingPageState extends ConsumerState<AccountingPage> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              category == null ? '还没有收支记录' : '所选分类在此日期内还没有记录',
+                              payment != null
+                                  ? '没有符合筛选条件的收支明细'
+                                  : category == null
+                                  ? '还没有收支记录'
+                                  : '所选分类在此日期内还没有记录',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                               ),
@@ -403,7 +467,11 @@ class _AccountingPageState extends ConsumerState<AccountingPage> {
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       Text(
-                        '${_date(entry.date)}${entry.note.isEmpty ? '' : ' · ${entry.note}'}',
+                        [
+                          _date(entry.date),
+                          ?entry.paymentMethod,
+                          if (entry.note.isNotEmpty) entry.note,
+                        ].join(' · '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -459,6 +527,7 @@ class _AccountEntryPageState extends ConsumerState<AccountEntryPage> {
   DateTime date = DateTime.now();
   int? categoryId;
   String? categoryName;
+  String? paymentMethod;
   bool saving = false;
 
   @override
@@ -476,6 +545,7 @@ class _AccountEntryPageState extends ConsumerState<AccountEntryPage> {
     date = entry.date;
     categoryId = entry.categoryId;
     categoryName = entry.category;
+    paymentMethod = entry.paymentMethod;
   }
 
   @override
@@ -511,6 +581,7 @@ class _AccountEntryPageState extends ConsumerState<AccountEntryPage> {
           category: category?.name ?? '未分类',
           date: date,
           note: note.text.trim(),
+          paymentMethod: paymentMethod,
         ),
       );
       if (mounted) {
@@ -628,6 +699,19 @@ class _AccountEntryPageState extends ConsumerState<AccountEntryPage> {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: paymentMethod,
+              decoration: const InputDecoration(labelText: '支付方式'),
+              hint: const Text('可选'),
+              items: [
+                for (final method in _paymentMethods)
+                  DropdownMenuItem(value: method, child: Text(method)),
+              ],
+              onChanged: saving
+                  ? null
+                  : (value) => setState(() => paymentMethod = value),
             ),
             const SizedBox(height: 8),
             InkWell(

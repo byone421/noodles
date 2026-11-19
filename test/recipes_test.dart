@@ -247,7 +247,8 @@ void main() {
       expect(find.text('掌控万物'), findsOneWidget);
       await tester.tap(find.text('我的'));
       await tester.pumpAndSettle();
-      expect(find.text('个人设置'), findsOneWidget);
+      expect(find.text('我的'), findsNWidgets(2));
+      expect(find.text('生活，越热爱越美好'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

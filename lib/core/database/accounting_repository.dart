@@ -11,7 +11,7 @@ class AccountingRepository {
       "CREATE TABLE account_categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL COLLATE NOCASE, type TEXT NOT NULL CHECK(type IN ('expense', 'income')), sort_order INTEGER NOT NULL DEFAULT 0, UNIQUE(name, type))",
     );
     await db.execute(
-      "CREATE TABLE account_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL CHECK(type IN ('expense', 'income')), amount_cents INTEGER NOT NULL CHECK(amount_cents > 0), category_id INTEGER, date TEXT NOT NULL, note TEXT NOT NULL, FOREIGN KEY(category_id) REFERENCES account_categories(id) ON DELETE SET NULL)",
+      "CREATE TABLE account_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL CHECK(type IN ('expense', 'income')), amount_cents INTEGER NOT NULL CHECK(amount_cents > 0), category_id INTEGER, date TEXT NOT NULL, note TEXT NOT NULL, payment_method TEXT, FOREIGN KEY(category_id) REFERENCES account_categories(id) ON DELETE SET NULL)",
     );
     await db.execute(
       'CREATE INDEX account_entries_date ON account_entries(date)',
@@ -82,6 +82,7 @@ class AccountingRepository {
       'category_id': entry.categoryId,
       'date': _day(entry.date),
       'note': entry.note.trim(),
+      'payment_method': entry.paymentMethod,
     };
     if (entry.id == null) {
       await db.insert('account_entries', values);

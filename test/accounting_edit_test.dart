@@ -122,6 +122,45 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('new expenses and incomes save the selected payment method', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      Builder(
+        builder: (context) => TextButton(
+          onPressed: () => Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (_) => const AccountEntryPage()),
+          ),
+          child: const Text('新增账单'),
+        ),
+      ),
+    );
+    final paymentField = find.byType(DropdownButtonFormField<String>);
+    for (final (type, label, method) in [
+      (AccountType.expense, '支出', '微信'),
+      (AccountType.income, '收入', '现金'),
+    ]) {
+      await tester.tap(find.text('新增账单'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), '12.50');
+      await tester.tap(paymentField);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(method).last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('保存记录'));
+      await tester.tap(find.text('保存记录'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AccountEntryPage), findsNothing);
+      final saved = AccountEntry.fromMap(database.rows.values.last);
+      expect(saved.type, type);
+      expect(saved.paymentMethod, method);
+    }
+  });
+
   testWidgets(
     'tap entry, edit all fields and refresh totals without duplicates',
     (tester) async {
@@ -160,6 +199,10 @@ void main() {
       await tester.tap(find.text('11').last);
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('支付宝').last);
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('保存记录'));
       await tester.tap(find.text('保存记录'));
       await tester.pumpAndSettle();
@@ -171,6 +214,7 @@ void main() {
       expect(saved['category_id'], 2);
       expect(saved['note'], '报销到账');
       expect(DateTime.parse(saved['date'] as String), newDate);
+      expect(find.textContaining(' · 支付宝 · 报销到账'), findsOneWidget);
       expect(find.text('+¥56.78'), findsOneWidget);
       expect(find.text('¥0.00'), findsOneWidget);
       expect(find.text('¥56.78'), findsNWidgets(2));

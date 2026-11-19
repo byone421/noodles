@@ -16,7 +16,7 @@ class RecipeRepository {
     final dir = await getApplicationDocumentsDirectory();
     final database = await openDatabase(
       p.join(dir.path, 'food_log.db'),
-      version: 8,
+      version: 9,
       onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
       onUpgrade: (db, oldVersion, _) async {
         if (oldVersion < 2) await InventoryRepository.createTables(db);
@@ -40,6 +40,11 @@ class RecipeRepository {
         if (oldVersion >= 7 && oldVersion < 8) {
           await db.execute(
             'ALTER TABLE account_categories ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0',
+          );
+        }
+        if (oldVersion >= 7 && oldVersion < 9) {
+          await db.execute(
+            'ALTER TABLE account_entries ADD COLUMN payment_method TEXT',
           );
         }
       },

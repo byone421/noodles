@@ -62,19 +62,23 @@ class _AccountCategoriesPageState extends ConsumerState<AccountCategoriesPage> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(accountCategoriesProvider(type));
+    final filterMode = widget.selectMode && widget.type == null;
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.selectMode
+          filterMode
+              ? '选择分类'
+              : widget.selectMode
               ? '选择${type == AccountType.expense ? '支出' : '收入'}分类'
               : '记账分类设置',
         ),
         actions: [
-          IconButton(
-            onPressed: () => _edit(),
-            tooltip: '添加分类',
-            icon: const Icon(Icons.add),
-          ),
+          if (!filterMode)
+            IconButton(
+              onPressed: () => _edit(),
+              tooltip: '添加分类',
+              icon: const Icon(Icons.add),
+            ),
         ],
       ),
       body: categories.when(
@@ -96,7 +100,7 @@ class _AccountCategoriesPageState extends ConsumerState<AccountCategoriesPage> {
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
-              if (!widget.selectMode)
+              if (widget.type == null) ...[
                 SegmentedButton<AccountType>(
                   segments: const [
                     ButtonSegment(
@@ -114,7 +118,8 @@ class _AccountCategoriesPageState extends ConsumerState<AccountCategoriesPage> {
                     query = '';
                   }),
                 ),
-              if (!widget.selectMode) const SizedBox(height: 16),
+                const SizedBox(height: 16),
+              ],
               TextField(
                 onChanged: (value) => setState(() => query = value),
                 decoration: const InputDecoration(
@@ -143,7 +148,7 @@ class _AccountCategoriesPageState extends ConsumerState<AccountCategoriesPage> {
                       ),
                       const SizedBox(height: 12),
                       Text(query.trim().isEmpty ? '还没有分类' : '没有找到匹配的分类'),
-                      if (query.trim().isEmpty)
+                      if (query.trim().isEmpty && !filterMode)
                         TextButton.icon(
                           onPressed: () => _edit(),
                           icon: const Icon(Icons.add),
@@ -170,16 +175,21 @@ class _AccountCategoriesPageState extends ConsumerState<AccountCategoriesPage> {
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                     subtitle: Text('排序 ${category.sortOrder}'),
-                    trailing: PopupMenuButton<String>(
-                      tooltip: '分类操作',
-                      onSelected: (action) => action == 'edit'
-                          ? _edit(category)
-                          : _delete(category),
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(value: 'edit', child: Text('编辑分类')),
-                        PopupMenuItem(value: 'delete', child: Text('删除分类')),
-                      ],
-                    ),
+                    trailing: filterMode
+                        ? null
+                        : PopupMenuButton<String>(
+                            tooltip: '分类操作',
+                            onSelected: (action) => action == 'edit'
+                                ? _edit(category)
+                                : _delete(category),
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(value: 'edit', child: Text('编辑分类')),
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Text('删除分类'),
+                              ),
+                            ],
+                          ),
                     onTap: () => Navigator.pop(context, category),
                   ),
                 ),
