@@ -167,6 +167,10 @@ void main() {
       await pump(tester, const AccountingPage());
       final entry = find.byType(Dismissible);
       await tester.ensureVisible(entry);
+      expect(
+        find.text('${database.rows[1]!['date']} · 午餐 · 餐饮'),
+        findsOneWidget,
+      );
       await tester.tap(entry);
       await tester.pumpAndSettle();
       expect(find.text('编辑账单'), findsOneWidget);
@@ -214,7 +218,7 @@ void main() {
       expect(saved['category_id'], 2);
       expect(saved['note'], '报销到账');
       expect(DateTime.parse(saved['date'] as String), newDate);
-      expect(find.textContaining(' · 支付宝 · 报销到账'), findsOneWidget);
+      expect(find.text('${saved['date']} · 报销到账 · 工资 · 支付宝'), findsOneWidget);
       expect(find.text('+¥56.78'), findsOneWidget);
       expect(find.text('¥0.00'), findsOneWidget);
       expect(find.text('¥56.78'), findsNWidgets(2));

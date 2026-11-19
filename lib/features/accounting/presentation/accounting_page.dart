@@ -468,12 +468,14 @@ class _AccountingPageState extends ConsumerState<AccountingPage> {
                       ),
                       Text(
                         [
-                          _date(entry.date),
-                          ?entry.paymentMethod,
-                          if (entry.note.isNotEmpty) entry.note,
-                        ].join(' · '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                              _date(entry.date),
+                              entry.note,
+                              if (entry.categoryId != null) entry.category,
+                              ?entry.paymentMethod,
+                            ]
+                            .map((part) => part.trim())
+                            .where((part) => part.isNotEmpty)
+                            .join(' · '),
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.muted,
